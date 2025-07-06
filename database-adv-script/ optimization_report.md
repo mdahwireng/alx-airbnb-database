@@ -27,11 +27,14 @@ INNER JOIN
     properties AS p ON b.property_id = p.property_id
 LEFT JOIN       
     payments AS pay ON b.booking_id = pay.booking_id
+WHERE
+    b.status IN ('confirmed', 'completed', 'pending', 'canceled') AND
+    p.name IS NOT NULL
 ORDER BY
     b.start_date DESC,
     u.first_name ASC,
     u.last_name ASC,
-    p.name ASC;         
+    p.name ASC;           
 ```
 
 ## Optimization Steps
@@ -39,27 +42,29 @@ ORDER BY
    ** Results:**
 ```plaintext
 "QUERY PLAN"
-"Sort  (cost=90.98..92.41 rows=570 width=2272) (actual time=0.236..0.246 rows=2 loops=1)"
+"Sort  (cost=57.63..57.66 rows=11 width=2272) (actual time=0.226..0.237 rows=2 loops=1)"
 "  Sort Key: b.start_date DESC, u.first_name, u.last_name, p.name"
 "  Sort Method: quicksort  Memory: 25kB"
-"  ->  Hash Join  (cost=44.62..64.89 rows=570 width=2272) (actual time=0.157..0.187 rows=2 loops=1)"
-"        Hash Cond: (b.property_id = p.property_id)"
-"        ->  Hash Join  (cost=33.05..51.79 rows=570 width=1240) (actual time=0.082..0.107 rows=2 loops=1)"
-"              Hash Cond: (b.user_id = u.user_id)"
-"              ->  Hash Right Join  (cost=22.38..39.58 rows=570 width=208) (actual time=0.048..0.068 rows=2 loops=1)"
-"                    Hash Cond: (pay.booking_id = b.booking_id)"
-"                    ->  Seq Scan on payments pay  (cost=0.00..15.70 rows=570 width=114) (actual time=0.010..0.012 rows=1 loops=1)"
-"                    ->  Hash  (cost=15.50..15.50 rows=550 width=110) (actual time=0.019..0.021 rows=2 loops=1)"
-"                          Buckets: 1024  Batches: 1  Memory Usage: 9kB"
-"                          ->  Seq Scan on bookings b  (cost=0.00..15.50 rows=550 width=110) (actual time=0.011..0.013 rows=2 loops=1)"
-"              ->  Hash  (cost=10.30..10.30 rows=30 width=1048) (actual time=0.021..0.022 rows=4 loops=1)"
+"  ->  Hash Join  (cost=46.41..57.44 rows=11 width=2272) (actual time=0.183..0.203 rows=2 loops=1)"
+"        Hash Cond: (b.user_id = u.user_id)"
+"        ->  Hash Join  (cost=35.73..46.73 rows=11 width=1240) (actual time=0.125..0.140 rows=2 loops=1)"
+"              Hash Cond: (p.property_id = b.property_id)"
+"              ->  Seq Scan on properties p  (cost=0.00..10.70 rows=70 width=1048) (actual time=0.015..0.018 rows=2 loops=1)"
+"                    Filter: (name IS NOT NULL)"
+"              ->  Hash  (cost=35.59..35.59 rows=11 width=208) (actual time=0.093..0.099 rows=2 loops=1)"
 "                    Buckets: 1024  Batches: 1  Memory Usage: 9kB"
-"                    ->  Seq Scan on users u  (cost=0.00..10.30 rows=30 width=1048) (actual time=0.013..0.016 rows=4 loops=1)"
-"        ->  Hash  (cost=10.70..10.70 rows=70 width=1048) (actual time=0.057..0.058 rows=2 loops=1)"
+"                    ->  Hash Right Join  (cost=18.39..35.59 rows=11 width=208) (actual time=0.051..0.089 rows=2 loops=1)"
+"                          Hash Cond: (pay.booking_id = b.booking_id)"
+"                          ->  Seq Scan on payments pay  (cost=0.00..15.70 rows=570 width=114) (actual time=0.008..0.010 rows=1 loops=1)"
+"                          ->  Hash  (cost=18.25..18.25 rows=11 width=110) (actual time=0.026..0.028 rows=2 loops=1)"
+"                                Buckets: 1024  Batches: 1  Memory Usage: 9kB"
+"                                ->  Seq Scan on bookings b  (cost=0.00..18.25 rows=11 width=110) (actual time=0.016..0.019 rows=2 loops=1)"
+"                                      Filter: ((status)::text = ANY ('{confirmed,completed,pending,canceled}'::text[]))"
+"        ->  Hash  (cost=10.30..10.30 rows=30 width=1048) (actual time=0.043..0.045 rows=4 loops=1)"
 "              Buckets: 1024  Batches: 1  Memory Usage: 9kB"
-"              ->  Seq Scan on properties p  (cost=0.00..10.70 rows=70 width=1048) (actual time=0.039..0.043 rows=2 loops=1)"
-"Planning Time: 1.502 ms"
-"Execution Time: 0.412 ms"
+"              ->  Seq Scan on users u  (cost=0.00..10.30 rows=30 width=1048) (actual time=0.027..0.031 rows=4 loops=1)"
+"Planning Time: 1.926 ms"
+"Execution Time: 0.394 ms"
 ```
 2. Identify potential optimizations:
    - **Indexes**: Ensure that appropriate indexes exist on the columns used in JOIN conditions and WHERE clauses.
