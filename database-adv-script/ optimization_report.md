@@ -75,4 +75,3 @@ ORDER BY
    - Consider using CTEs (Common Table Expressions) or subqueries if they can simplify the query structure without impacting performance.
  - **Final Query**: After applying the optimizations, the final query remains the same as the original, but with indexes applied to improve performance.
  - **Monitoring**: Continuously monitor the query performance using `EXPLAIN ANALYZE` after applying the optimizations to ensure that the changes have a positive impact on execution time and resource usage.
- - **Conclusion**: The query is optimized for performance by ensuring appropriate indexes are in place, using INNER JOINs where applicable, and simplifying the query structure. Regular monitoring and adjustments based on query performance metrics will help maintain optimal performance as the dataset grows.
